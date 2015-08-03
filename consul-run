@@ -1,0 +1,100 @@
+#!/bin/bash
+
+IMAGE="labrute974/consul"
+
+usage() {
+  echo "usage: $0 [<command>] <arguments> [docker options]
+                    or
+               $0 <consul options>
+
+        Commands, arguments and Docker options and used only for building the docker command-line.
+        commands:
+          cmd:help     show this help
+          cmd:build    build the docker command with the right ports exposed
+
+        arguments for cmd:build:
+          cmd:build takes the following format as argument:
+                [ip_or_interface][:run_mode]
+
+            ip_or_interface: either a network interface name or an IP address.
+                             by default, it will use the ip of the gateway.
+                             The IP specified is used for consul to know on which IP to advertise its services
+            run_mode: can be either \"client\" or \"server\" (default).
+
+        If anything but those commands are specified, it will launch a consul service on your Docker host / Docker swarm cluster.
+        The arguments that can be used are consul agent options.
+       "
+  exit 1
+}
+
+build() {
+  declare advertise_ip run_mode network consul_opts
+  IFS=: read network run_mode <<< "$1"
+  shift
+  local docker_args=$@
+
+  if [[ -z "$run_mode" ]] || [[ "$run_mode" == "server" ]]
+  then
+      consul_opts="-server"
+  fi
+
+  if [[ -z "$network" ]] || grep -q ^- <<< $network
+  then
+    # if network is not set, get the advertise ip from default gateway of the container
+    advertise_ip=$(ip route list | awk '/^default/ { print $3 }' | tail -n 1)
+  elif [[ "$network" =~ ^([0-9]{1,3})[.]([0-9]{1,3})[.]([0-9]{1,3})[.]([0-9]{1,3})$ ]]
+  then
+    for (( i = 1; i < ${#BASH_REMATCH[@]}; ++i ))
+    do
+      (( ${BASH_REMATCH[$i]} <= 255 )) || { echo "The IP address specified is incorrect or the interface does not exist." >&2; exit 1; }
+    done
+
+    advertise_ip=$network
+  elif ip addr | grep -q ${network}:
+  then
+    advertise_ip=$(ip addr show $network | awk '/ *inet / {print $2}' | sed 's#/.*##' 2>&1)
+  else
+    echo "The IP address specified is incorrect or the interface does not exist." >&2
+    exit 1
+  fi
+
+  cat << EOF
+Execute the following command to create the instance:
+  
+  docker run \
+-p $advertise_ip:8300:8300 \
+-p $advertise_ip:8301:8301 \
+-p $advertise_ip:8301:8301/udp \
+-p $advertise_ip:8302:8302 \
+-p $advertise_ip:8302:8302/udp \
+-p $advertise_ip:8400:8400 \
+-p $advertise_ip:8500:8500 \
+-p $advertise_ip:53:53 \
+-p $advertise_ip:53:53/udp \
+$docker_args \
+$IMAGE $consul_opts -advertise $advertise_ip
+EOF
+}
+
+main() {
+  declare namespace command
+  IFS=: read namespace command <<< "$1"
+
+  case "$namespace" in
+    cmd)
+      case "$command" in
+        build)
+          shift
+          build $@
+          ;;
+        *)
+          usage
+          ;;
+      esac
+      ;;
+    *)
+      /bin/consul agent -config-dir=/consul/config/ $@
+  esac
+}
+
+main $@
