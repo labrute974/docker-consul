@@ -5,6 +5,6 @@
   "recursors": [ "8.8.8.8", "8.8.4.4" ],
   "disable_update_check": true,
   "ports": {
-    "dns": "53"
+    "dns": 53
   }
 }
