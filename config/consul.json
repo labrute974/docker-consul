@@ -1,0 +1,10 @@
+{
+  "data_dir": "/consul/data",
+  "ui_dir": "/consul/ui",
+  "client_addr": "0.0.0.0",
+  "recursors": [ "8.8.8.8", "8.8.4.4" ],
+  "disable_update_check": true,
+  "ports": {
+    "dns": "53"
+  }
+}
