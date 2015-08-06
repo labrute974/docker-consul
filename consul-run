@@ -14,12 +14,13 @@ usage() {
 
         arguments for cmd:build:
           cmd:build takes the following format as argument:
-                [ip_or_interface][:run_mode]
+                [ip_or_interface][:run_mode][:join_ip]
 
             ip_or_interface: either a network interface name or an IP address.
                              by default, it will use the ip of the gateway.
                              The IP specified is used for consul to know on which IP to advertise its services
             run_mode: can be either \"client\" or \"server\" (default).
+            join: which ip is one of the current consul service running on
 
         If anything but those commands are specified, it will launch a consul service on your Docker host / Docker swarm cluster.
         The arguments that can be used are consul agent options.
@@ -28,10 +29,20 @@ usage() {
 }
 
 build() {
-  declare advertise_ip run_mode network consul_opts
-  IFS=: read network run_mode <<< "$1"
+  declare advertise_ip run_mode network consul_opts join_ip join_cmd
+  IFS=: read network run_mode join_ip <<< "$1"
   shift
   local docker_args=$@
+
+  if [[ "$join_ip" =~ ^([0-9]{1,3})[.]([0-9]{1,3})[.]([0-9]{1,3})[.]([0-9]{1,3})$ ]]
+  then
+    for (( i = 1; i < ${#BASH_REMATCH[@]}; ++i ))
+    do
+      (( ${BASH_REMATCH[$i]} <= 255 )) || { echo "The IP address specified is incorrect." >&2; exit 1; }
+    done 
+
+    join_cmd="-join $join_ip"
+  fi
 
   if [[ -z "$run_mode" ]] || [[ "$run_mode" == "server" ]]
   then
@@ -72,7 +83,7 @@ Execute the following command to create the instance:
 -p $advertise_ip:53:53 \
 -p $advertise_ip:53:53/udp \
 $docker_args \
-$IMAGE $consul_opts -advertise $advertise_ip
+$IMAGE $consul_opts -advertise $advertise_ip $join_cmd
 EOF
 }
 
