@@ -166,3 +166,8 @@ You can now connect on the **consul cluster** by using one of the docker host IP
 You can run `docker-machine ls` to find the IPs to connect to.
 
 Enjoy!
+
+## TODO
+
+- Find a way to make the swarm master highly available
+- Generate certs for the swarm containers to map them to the name of the **Docker host** rather than its IP, as Virtualbox doesn't set static IPs by default to its VMs.
