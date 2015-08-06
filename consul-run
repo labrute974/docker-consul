@@ -34,14 +34,20 @@ build() {
   shift
   local docker_args=$@
 
-  if [[ "$join_ip" =~ ^([0-9]{1,3})[.]([0-9]{1,3})[.]([0-9]{1,3})[.]([0-9]{1,3})$ ]]
+  if [[ -z "$join_ip" ]]
+  then
+    join_cmd="-bootstrap"
+  elif [[ "$join_ip" =~ ^([0-9]{1,3})[.]([0-9]{1,3})[.]([0-9]{1,3})[.]([0-9]{1,3})$ ]]
   then
     for (( i = 1; i < ${#BASH_REMATCH[@]}; ++i ))
     do
-      (( ${BASH_REMATCH[$i]} <= 255 )) || { echo "The IP address specified is incorrect." >&2; exit 1; }
+      (( ${BASH_REMATCH[$i]} <= 255 )) || { echo "The IP address specified for the cluster to join is incorrect." >&2; exit 1; }
     done 
 
     join_cmd="-join $join_ip"
+  else
+    echo "The IP address specified for the cluster to join is incorrect." >&2
+    exit 1
   fi
 
   if [[ -z "$run_mode" ]] || [[ "$run_mode" == "server" ]]
@@ -70,7 +76,7 @@ build() {
   fi
 
   cat << EOF
-Execute the following command to create the instance:
+# Execute the following command to create the instance:
   
   docker run \
 -p $advertise_ip:8300:8300 \
