@@ -110,7 +110,7 @@ main() {
       esac
       ;;
     *)
-      /bin/consul agent -config-dir=/consul/config/ $@
+      /bin/consul agent -config-dir=/consul/etc/ $@
   esac
 }
 

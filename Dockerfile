@@ -6,8 +6,8 @@ ADD https://dl.bintray.com/mitchellh/consul/0.5.2_web_ui.zip /tmp/consul_ui.zip
 
 RUN yum -y install unzip
 
-RUN mkdir -p /consul/{data,config}
-ADD ./config/ /consul/config/
+RUN mkdir -p /consul/{data,etc/conf.d}
+ADD ./config/ /consul/etc/
 ADD ./consul-run /bin/consul-run
 
 RUN cd /bin && unzip /tmp/consul.zip && chmod +x /bin/consul && rm -f /tmp/consul.zip
